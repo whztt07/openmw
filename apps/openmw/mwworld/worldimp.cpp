@@ -14,6 +14,8 @@
 #include <libs/openengine/bullet/trace.h>
 #include <libs/openengine/bullet/physic.hpp>
 
+#include "../mwmechanics/autocalcspell.hpp"
+
 #include <components/bsa/bsa_archive.hpp>
 #include <components/files/collections.hpp>
 #include <components/compiler/locals.hpp>
@@ -260,6 +262,45 @@ namespace MWWorld
         mWeatherManager = new MWWorld::WeatherManager(mRendering,&mFallback);
 
         MWBase::Environment::get().getWindowManager()->executeInConsole(mStartupScript);
+
+        bool save=true;
+        if (save)
+        {
+        const MWWorld::Store<ESM::NPC> &npcs =
+            getStore().get<ESM::NPC>();
+
+        std::ofstream outfile("openmw_autocalc.txt");
+        outfile << "{" << std::endl;
+
+        for (MWWorld::Store<ESM::NPC>::iterator iter = npcs.begin(); iter != npcs.end(); ++iter)
+        {
+            const ESM::NPC* npc = &*iter;
+
+            if (npc->mNpdtType != ESM::NPC::NPC_WITH_AUTOCALCULATED_STATS)
+                continue;
+
+            MWWorld::ManualRef ref (getStore(), npc->mId);
+            MWWorld::Ptr ptr = ref.getPtr();
+            ptr.getClass().getContainerStore(ptr);
+
+            int skills[ESM::Skill::Length];
+            for (int i=0; i<ESM::Skill::Length; ++i)
+                skills[i] = ptr.getClass().getNpcStats(ptr).getSkill(i).getBase();
+
+            int attributes[ESM::Attribute::Length];
+            for (int i=0; i<ESM::Attribute::Length; ++i)
+                attributes[i] = ptr.getClass().getNpcStats(ptr).getAttribute(i).getBase();
+
+            std::vector<std::string> spells = MWMechanics::autoCalcNpcSpells(skills, attributes,
+                                           getStore().get<ESM::Race>().find(npc->mRace));
+            outfile << "\t\"" << npc->mId << "\" : [";
+
+            for (std::vector<std::string>::iterator it = spells.begin(); it != spells.end(); ++it)
+                outfile << "\"" << *it << "\", ";
+            outfile << "]," << std::endl;
+        }
+        outfile << "}" << std::endl;
+        }
     }
 
     void World::clear()
