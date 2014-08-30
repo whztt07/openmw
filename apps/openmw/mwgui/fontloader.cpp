@@ -6,7 +6,6 @@
 #include <MyGUI_ResourceManager.h>
 #include <MyGUI_FontManager.h>
 #include <MyGUI_ResourceManualFont.h>
-#include <MyGUI_XmlDocument.h>
 #include <MyGUI_FactoryManager.h>
 
 
@@ -121,6 +120,39 @@ namespace
             return encoder.getUtf8(std::string(1, c));
     }
 
+
+    typedef struct
+    {
+        float x;
+        float y;
+    } Point;
+
+    typedef struct
+    {
+        float u1; // appears unused, always 0
+        Point top_left;
+        Point top_right;
+        Point bottom_left;
+        Point bottom_right;
+        float width;
+        float height;
+        float u2; // appears unused, always 0
+        float kerning;
+        float ascent;
+    } GlyphInfo;
+
+    void addFontGlyph(MyGUI::ResourceManualFont* font, MyGUI::Char unicodeVal, GlyphInfo& data, int fontSize)
+    {
+        float x1 = data.top_left.x;
+        float y1 = data.top_left.y;
+        float x2 = data.top_right.x;
+        float y2 = data.bottom_left.y;
+        font->addGlyphInfo(unicodeVal,
+                           MyGUI::GlyphInfo(unicodeVal, data.width, data.height,
+                                            data.width, data.kerning, (fontSize - data.ascent),
+                           MyGUI::FloatRect(x1, y1, x2, y2)));
+    }
+
 }
 
 namespace MWGui
@@ -146,27 +178,6 @@ namespace MWGui
             }
         }
     }
-
-
-    typedef struct
-    {
-        float x;
-        float y;
-    } Point;
-
-    typedef struct
-    {
-        float u1; // appears unused, always 0
-        Point top_left;
-        Point top_right;
-        Point bottom_left;
-        Point bottom_right;
-        float width;
-        float height;
-        float u2; // appears unused, always 0
-        float kerning;
-        float ascent;
-    } GlyphInfo;
 
     void FontLoader::loadFont(const std::string &fileName, bool exportToFile)
     {
@@ -228,39 +239,16 @@ namespace MWGui
         MyGUI::ResourceManualFont* font = static_cast<MyGUI::ResourceManualFont*>(
                     MyGUI::FactoryManager::getInstance().createObject("Resource", "ResourceManualFont"));
 
-        // We need to emulate loading from XML because the data members are private as of mygui 3.2.0
-        MyGUI::xml::Document xmlDocument;
-        MyGUI::xml::ElementPtr root = xmlDocument.createRoot("ResourceManualFont");
-        root->addAttribute("name", resourceName);
-
-        MyGUI::xml::ElementPtr defaultHeight = root->createChild("Property");
-        defaultHeight->addAttribute("key", "DefaultHeight");
-        defaultHeight->addAttribute("value", fontSize);
-        MyGUI::xml::ElementPtr source = root->createChild("Property");
-        source->addAttribute("key", "Source");
-        source->addAttribute("value", std::string(textureName));
-        MyGUI::xml::ElementPtr codes = root->createChild("Codes");
+        font->setDefaultHeight(fontSize);
+        font->setSource(textureName);
+        font->setResourceName(resourceName);
 
         for(int i = 0; i < 256; i++)
         {
-            float x1 = data[i].top_left.x*width;
-            float y1 = data[i].top_left.y*height;
-            float w  = data[i].top_right.x*width - x1;
-            float h  = data[i].bottom_left.y*height - y1;
-
             ToUTF8::Utf8Encoder encoder(mEncoding);
             unsigned long unicodeVal = utf8ToUnicode(getUtf8(i, encoder, mEncoding));
 
-            MyGUI::xml::ElementPtr code = codes->createChild("Code");
-            code->addAttribute("index", unicodeVal);
-            code->addAttribute("coord", MyGUI::utility::toString(x1) + " "
-                                        + MyGUI::utility::toString(y1) + " "
-                                        + MyGUI::utility::toString(w) + " "
-                                        + MyGUI::utility::toString(h));
-            code->addAttribute("advance", data[i].width);
-            code->addAttribute("bearing", MyGUI::utility::toString(data[i].kerning) + " "
-                               + MyGUI::utility::toString((fontSize-data[i].ascent)));
-            code->addAttribute("size", MyGUI::IntSize(data[i].width, data[i].height));
+            addFontGlyph(font, unicodeVal, data[i], fontSize);
 
             // More hacks! The french game uses several win1252 characters that are not included
             // in the cp437 encoding of the font. Fall back to similar available characters.
@@ -297,47 +285,20 @@ namespace MWGui
                     if (it->first != i)
                         continue;
 
-                    MyGUI::xml::ElementPtr code = codes->createChild("Code");
-                    code->addAttribute("index", it->second);
-                    code->addAttribute("coord", MyGUI::utility::toString(x1) + " "
-                                                + MyGUI::utility::toString(y1) + " "
-                                                + MyGUI::utility::toString(w) + " "
-                                                + MyGUI::utility::toString(h));
-                    code->addAttribute("advance", data[i].width);
-                    code->addAttribute("bearing", MyGUI::utility::toString(data[i].kerning) + " "
-                                       + MyGUI::utility::toString((fontSize-data[i].ascent)));
-                    code->addAttribute("size", MyGUI::IntSize(data[i].width, data[i].height));
+                    addFontGlyph(font, it->second, data[i], fontSize);
                 }
             }
 
             // ASCII vertical bar, use this as text input cursor
             if (i == 124)
             {
-                MyGUI::xml::ElementPtr cursorCode = codes->createChild("Code");
-                cursorCode->addAttribute("index", MyGUI::FontCodeType::Cursor);
-                cursorCode->addAttribute("coord", MyGUI::utility::toString(x1) + " "
-                                            + MyGUI::utility::toString(y1) + " "
-                                            + MyGUI::utility::toString(w) + " "
-                                            + MyGUI::utility::toString(h));
-                cursorCode->addAttribute("advance", data[i].width);
-                cursorCode->addAttribute("bearing", MyGUI::utility::toString(data[i].kerning) + " "
-                                   + MyGUI::utility::toString((fontSize-data[i].ascent)));
-                cursorCode->addAttribute("size", MyGUI::IntSize(data[i].width, data[i].height));
+                addFontGlyph(font, MyGUI::FontCodeType::Cursor, data[i], fontSize);
             }
 
             // Question mark, use for NotDefined marker (used for glyphs not existing in the font)
             if (i == 63)
             {
-                MyGUI::xml::ElementPtr cursorCode = codes->createChild("Code");
-                cursorCode->addAttribute("index", MyGUI::FontCodeType::NotDefined);
-                cursorCode->addAttribute("coord", MyGUI::utility::toString(x1) + " "
-                                            + MyGUI::utility::toString(y1) + " "
-                                            + MyGUI::utility::toString(w) + " "
-                                            + MyGUI::utility::toString(h));
-                cursorCode->addAttribute("advance", data[i].width);
-                cursorCode->addAttribute("bearing", MyGUI::utility::toString(data[i].kerning) + " "
-                                   + MyGUI::utility::toString((fontSize-data[i].ascent)));
-                cursorCode->addAttribute("size", MyGUI::IntSize(data[i].width, data[i].height));
+                addFontGlyph(font, MyGUI::FontCodeType::NotDefined, data[i], fontSize);
             }
         }
 
@@ -350,21 +311,22 @@ namespace MWGui
             else if (i == 1)
                 type = MyGUI::FontCodeType::SelectedBack;
 
-            MyGUI::xml::ElementPtr cursorCode = codes->createChild("Code");
-            cursorCode->addAttribute("index", type);
-            cursorCode->addAttribute("coord", "0 0 0 0");
-            cursorCode->addAttribute("advance", "0");
-            cursorCode->addAttribute("bearing", "0 0");
-            cursorCode->addAttribute("size", "0 0");
+            GlyphInfo empty;
+            Point emptyPoint;
+            emptyPoint.x = 0;
+            emptyPoint.y = 0;
+            empty.ascent = 0;
+            empty.bottom_left = emptyPoint;
+            empty.bottom_right = emptyPoint;
+            empty.height = 0;
+            empty.kerning = 0;
+            empty.top_left = emptyPoint;
+            empty.top_right = emptyPoint;
+            empty.u1 = 0;
+            empty.u2 = 0;
+            empty.width = 0;
+            addFontGlyph(font, type, empty, fontSize);
         }
-
-        if (exportToFile)
-        {
-            xmlDocument.createDeclaration();
-            xmlDocument.save(resourceName + ".xml");
-        }
-
-        font->deserialization(root, MyGUI::Version(3,2,0));
 
         MyGUI::ResourceManager::getInstance().removeByName(font->getResourceName());
         MyGUI::ResourceManager::getInstance().addResource(font);
