@@ -301,14 +301,15 @@ namespace MWScript
                 }
         };
 
+        template <class R>
         class OpDontSaveObject : public Interpreter::Opcode0
         {
             public:
 
                 virtual void execute (Interpreter::Runtime& runtime)
                 {
-                    // We are ignoring the DontSaveObject statement for now. Probably not worth
-                    // bothering with. The incompatibility we are creating should be marginal at most.
+                    MWWorld::Ptr ptr = R()(runtime);
+                    ptr.getRefData().dontSave();
                 }
         };
 
@@ -997,7 +998,8 @@ namespace MWScript
             interpreter.installSegment5 (Compiler::Misc::opcodeTogglePathgrid, new OpTogglePathgrid);
             interpreter.installSegment5 (Compiler::Misc::opcodeToggleWater, new OpToggleWater);
             interpreter.installSegment5 (Compiler::Misc::opcodeToggleWorld, new OpToggleWorld);
-            interpreter.installSegment5 (Compiler::Misc::opcodeDontSaveObject, new OpDontSaveObject);
+            interpreter.installSegment5 (Compiler::Misc::opcodeDontSaveObject, new OpDontSaveObject<ImplicitRef>);
+            interpreter.installSegment5 (Compiler::Misc::opcodeDontSaveObjectExplicit, new OpDontSaveObject<ExplicitRef>);
             interpreter.installSegment5 (Compiler::Misc::opcodeToggleVanityMode, new OpToggleVanityMode);
             interpreter.installSegment5 (Compiler::Misc::opcodeGetPcSleep, new OpGetPcSleep);
             interpreter.installSegment5 (Compiler::Misc::opcodeGetPcJumping, new OpGetPcJumping);

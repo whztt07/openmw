@@ -49,7 +49,7 @@ namespace MWWorld
 
             void cleanup();
 
-            bool mChanged;
+            void triggerChangeEvent();
 
         public:
 
@@ -122,8 +122,18 @@ namespace MWWorld
             CustomData *getCustomData();
             ///< May return a 0-pointer. The ownership of the return data object is not transferred.
 
-            bool hasChanged() const;
-            ///< Has this RefData changed since it was originally loaded?
+            enum ChangeState
+            {
+                Unchanged,
+                Changed,
+                DontSave // Treat as unchanged, and ignore tracking any further changes
+            };
+            ChangeState getChangeState() const;
+
+            void dontSave();
+            ///< Mark this RefData as unchanged, and stop tracking future change events
+        private:
+            ChangeState mChanged;
     };
 }
 

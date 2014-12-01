@@ -37,7 +37,7 @@ namespace MWWorld
     }
 
     RefData::RefData()
-    : mBaseNode(0), mHasLocals (false), mEnabled (true), mCount (1), mCustomData (0), mChanged(false), mDeleted(false)
+    : mBaseNode(0), mHasLocals (false), mEnabled (true), mCount (1), mCustomData (0), mChanged(RefData::Unchanged), mDeleted(false)
     {
         for (int i=0; i<3; ++i)
         {
@@ -50,7 +50,7 @@ namespace MWWorld
     RefData::RefData (const ESM::CellRef& cellRef)
     : mBaseNode(0), mHasLocals (false), mEnabled (true), mCount (1), mPosition (cellRef.mPos),
       mCustomData (0),
-      mChanged(false), // Loading from ESM/ESP files -> assume unchanged
+      mChanged(RefData::Unchanged), // Loading from ESM/ESP files -> assume unchanged
       mDeleted(false)
     {
         mLocalRotation.rot[0]=0;
@@ -61,9 +61,9 @@ namespace MWWorld
     RefData::RefData (const ESM::ObjectState& objectState)
     : mBaseNode (0), mHasLocals (false), mEnabled (objectState.mEnabled),
       mCount (objectState.mCount), mPosition (objectState.mPosition), mCustomData (0),
-      mChanged(true), // Loading from a savegame -> assume changed
+      mChanged(RefData::Changed), // Loading from a savegame -> assume changed
       mDeleted(false)
-    {   
+    {
         for (int i=0; i<3; ++i)
             mLocalRotation.rot[i] = objectState.mLocalRotation[i];
     }
@@ -156,7 +156,7 @@ namespace MWWorld
             mLocals.configure (script);
             mHasLocals = true;
             if (!mLocals.isEmpty())
-                mChanged = true;
+                triggerChangeEvent();
         }
     }
 
@@ -165,7 +165,7 @@ namespace MWWorld
         if(count == 0)
             MWBase::Environment::get().getWorld()->removeRefScript(this);
 
-        mChanged = true;
+        triggerChangeEvent();
 
         mCount = count;
     }
@@ -192,19 +192,21 @@ namespace MWWorld
 
     void RefData::enable()
     {
-        mChanged = !mEnabled;
+        if (!mEnabled)
+            triggerChangeEvent();
         mEnabled = true;
     }
 
     void RefData::disable()
     {
-        mChanged = mEnabled;
+        if (mEnabled)
+            triggerChangeEvent();
         mEnabled = false;
     }
 
     void RefData::setPosition(const ESM::Position& pos)
     {
-        mChanged = true;
+        triggerChangeEvent();
         mPosition = pos;
     }
 
@@ -215,7 +217,7 @@ namespace MWWorld
 
     void RefData::setLocalRotation(const LocalRotation& rot)
     {
-        mChanged = true;
+        triggerChangeEvent();
         mLocalRotation = rot;
     }
 
@@ -226,7 +228,7 @@ namespace MWWorld
 
     void RefData::setCustomData (CustomData *data)
     {
-        mChanged = true; // We do not currently track CustomData, so assume anything with a CustomData is changed
+        triggerChangeEvent(); // We do not currently track CustomData, so assume anything with a CustomData is changed
         delete mCustomData;
         mCustomData = data;
     }
@@ -236,8 +238,19 @@ namespace MWWorld
         return mCustomData;
     }
 
-    bool RefData::hasChanged() const
+    RefData::ChangeState RefData::getChangeState() const
     {
         return mChanged;
+    }
+
+    void RefData::triggerChangeEvent()
+    {
+        if (mChanged != RefData::DontSave)
+            mChanged = RefData::Changed;
+    }
+
+    void RefData::dontSave()
+    {
+        mChanged = RefData::DontSave;
     }
 }

@@ -215,6 +215,7 @@ namespace Compiler
         const int opcodeToggleWorld = 0x20002f5;
         const int opcodeTogglePathgrid = 0x2000146;
         const int opcodeDontSaveObject = 0x2000153;
+        const int opcodeDontSaveObjectExplicit = 0x20002f6;
         const int opcodeToggleVanityMode = 0x2000174;
         const int opcodeGetPcSleep = 0x200019f;
         const int opcodeGetPcJumping = 0x2000233;

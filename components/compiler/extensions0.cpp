@@ -260,7 +260,7 @@ namespace Compiler
             extensions.registerInstruction ("tw", "", opcodeToggleWorld);
             extensions.registerInstruction ("togglepathgrid", "", opcodeTogglePathgrid);
             extensions.registerInstruction ("tpg", "", opcodeTogglePathgrid);
-            extensions.registerInstruction ("dontsaveobject", "", opcodeDontSaveObject);
+            extensions.registerInstruction ("dontsaveobject", "", opcodeDontSaveObject, opcodeDontSaveObjectExplicit);
             extensions.registerInstruction ("togglevanitymode", "", opcodeToggleVanityMode);
             extensions.registerInstruction ("tvm", "", opcodeToggleVanityMode);
             extensions.registerFunction ("getpcsleep", 'l', "", opcodeGetPcSleep);

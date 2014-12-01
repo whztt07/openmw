@@ -72,7 +72,9 @@ namespace
                 iter (collection.mList.begin());
                 iter!=collection.mList.end(); ++iter)
             {
-                if (!iter->mData.hasChanged() && !iter->mRef.hasChanged() && iter->mRef.getRefNum().mContentFile != -1)
+                if (iter->mRef.getRefNum().mContentFile != -1 &&
+                        (iter->mData.getChangeState() == MWWorld::RefData::DontSave ||
+                        (iter->mData.getChangeState() == MWWorld::RefData::Unchanged && !iter->mRef.hasChanged())))
                 {
                     // Reference that came from a content file and has not been changed -> ignore
                     continue;
