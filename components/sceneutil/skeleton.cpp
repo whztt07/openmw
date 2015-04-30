@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+#include "bone.hpp"
+
 namespace SceneUtil
 {
 
@@ -131,35 +133,6 @@ void Skeleton::setActive(bool active)
 bool Skeleton::getActive() const
 {
     return mActive;
-}
-
-Bone::Bone()
-    : mNode(NULL)
-{
-}
-
-Bone::~Bone()
-{
-    for (unsigned int i=0; i<mChildren.size(); ++i)
-        delete mChildren[i];
-    mChildren.clear();
-}
-
-void Bone::update(const osg::Matrixf* parentMatrixInSkeletonSpace)
-{
-    if (!mNode)
-    {
-        std::cerr << "Bone without node " << std::endl;
-    }
-    if (parentMatrixInSkeletonSpace)
-        mMatrixInSkeletonSpace = mNode->getMatrix() * (*parentMatrixInSkeletonSpace);
-    else
-        mMatrixInSkeletonSpace = mNode->getMatrix();
-
-    for (unsigned int i=0; i<mChildren.size(); ++i)
-    {
-        mChildren[i]->update(&mMatrixInSkeletonSpace);
-    }
 }
 
 }

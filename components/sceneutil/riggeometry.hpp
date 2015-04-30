@@ -4,6 +4,10 @@
 #include <osg/Geometry>
 #include <osg/Matrixf>
 
+/** \addtogroup Skinning
+ *  @{
+ */
+
 namespace SceneUtil
 {
 
@@ -73,5 +77,7 @@ namespace SceneUtil
     };
 
 }
+
+/** @} */
 
 #endif

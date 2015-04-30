@@ -5,30 +5,14 @@
 
 #include <memory>
 
+/** \addtogroup Skinning
+ *  @{
+ */
+
 namespace SceneUtil
 {
 
-    /// @brief Defines a Bone hierarchy, used for updating of skeleton-space bone matrices.
-    /// @note To prevent unnecessary updates, only bones that are used for skinning will be added to this hierarchy.
-    class Bone
-    {
-    public:
-        Bone();
-        ~Bone();
-
-        osg::Matrixf mMatrixInSkeletonSpace;
-
-        osg::MatrixTransform* mNode;
-
-        std::vector<Bone*> mChildren;
-
-        /// Update the skeleton-space matrix of this bone and all its children.
-        void update(const osg::Matrixf* parentMatrixInSkeletonSpace);
-
-    private:
-        Bone(const Bone&);
-        void operator=(const Bone&);
-    };
+    class Bone;
 
     /// @brief Handles the bone matrices for any number of child RigGeometries.
     /// @par Bones should be created as osg::MatrixTransform children of the skeleton.
@@ -70,5 +54,7 @@ namespace SceneUtil
     };
 
 }
+
+/** @} */
 
 #endif

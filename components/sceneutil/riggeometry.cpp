@@ -9,7 +9,56 @@
 #include <osg/io_utils>
 
 #include "skeleton.hpp"
-#include "util.hpp"
+#include "bone.hpp"
+
+namespace
+{
+
+Eigen::Vector4f toEigen(const osg::Vec3f& vec)
+{
+    Eigen::Vector4f result;
+    result << vec.x(), vec.y(), vec.z(), 1.f;
+    return result;
+}
+
+// Eigen transformation instead of matrix4?
+void transformBoundingSphere (const Eigen::Matrix4f& matrix, osg::BoundingSphere& bsphere)
+{
+    Eigen::Vector4f xdash = toEigen(bsphere._center);
+    xdash(0) += bsphere._radius;
+    xdash = matrix * xdash;
+
+    Eigen::Vector4f ydash = toEigen(bsphere._center);
+    ydash(1) += bsphere._radius;
+    ydash = matrix * ydash;
+
+    Eigen::Vector4f zdash = toEigen(bsphere._center);
+    zdash(2) += bsphere._radius;
+    zdash = matrix * zdash;
+
+    Eigen::Vector4f centerEigen;
+    centerEigen << bsphere._center.x(), bsphere._center.y(), bsphere._center.z(), 1.f;
+    centerEigen = matrix * centerEigen;
+
+    bsphere._center = osg::Vec3f(centerEigen(0), centerEigen(1), centerEigen(2));
+
+    // TODO: don't need to get length of all 3?
+    xdash -= centerEigen;
+    float sqrlen_xdash = xdash.squaredNorm();
+
+    ydash -= centerEigen;
+    float sqrlen_ydash = ydash.squaredNorm();
+
+    zdash -= centerEigen;
+    float sqrlen_zdash = zdash.squaredNorm();
+
+    bsphere._radius = sqrlen_xdash;
+    if (bsphere._radius<sqrlen_ydash) bsphere._radius = sqrlen_ydash;
+    if (bsphere._radius<sqrlen_zdash) bsphere._radius = sqrlen_zdash;
+    bsphere._radius = sqrtf(bsphere._radius);
+}
+
+}
 
 namespace SceneUtil
 {
@@ -173,26 +222,9 @@ bool RigGeometry::initFromParentSkeleton(osg::NodeVisitor* nv)
     return true;
 }
 
-void accummulateMatrix(const osg::Matrixf& invBindMatrix, const osg::Matrixf& matrix, float weight, osg::Matrixf& result)
+void accummulateMatrix(const Eigen::Matrix4f& invBindMatrix, const Eigen::Matrix4f& matrix, float weight, Eigen::Matrix4f& result)
 {
-    osg::Matrixf m = invBindMatrix * matrix;
-    float* ptr = m.ptr();
-    float* ptrresult = result.ptr();
-    ptrresult[0] += ptr[0] * weight;
-    ptrresult[1] += ptr[1] * weight;
-    ptrresult[2] += ptr[2] * weight;
-
-    ptrresult[4] += ptr[4] * weight;
-    ptrresult[5] += ptr[5] * weight;
-    ptrresult[6] += ptr[6] * weight;
-
-    ptrresult[8] += ptr[8] * weight;
-    ptrresult[9] += ptr[9] * weight;
-    ptrresult[10] += ptr[10] * weight;
-
-    ptrresult[12] += ptr[12] * weight;
-    ptrresult[13] += ptr[13] * weight;
-    ptrresult[14] += ptr[14] * weight;
+    result += (matrix * invBindMatrix) * weight;
 }
 
 void RigGeometry::update(osg::NodeVisitor* nv)
@@ -210,6 +242,10 @@ void RigGeometry::update(osg::NodeVisitor* nv)
     mSkeleton->updateBoneMatrices(nv);
 
     osg::Matrixf geomToSkel = getGeomToSkelMatrix(nv);
+    Eigen::Matrix4f geomToSkelEigen;
+    for (int i=0; i<4; ++i)
+        for (int j=0; j<4; ++j)
+            geomToSkelEigen(j,i) = geomToSkel(i,j);
 
     // skinning
     osg::Vec3Array* positionSrc = static_cast<osg::Vec3Array*>(mSourceGeometry->getVertexArray());
@@ -220,26 +256,51 @@ void RigGeometry::update(osg::NodeVisitor* nv)
 
     for (Bone2VertexMap::const_iterator it = mBone2VertexMap.begin(); it != mBone2VertexMap.end(); ++it)
     {
-        osg::Matrixf resultMat  (0, 0, 0, 0,
-                                0, 0, 0, 0,
-                                0, 0, 0, 0,
-                                0, 0, 0, 1);
+        Eigen::Matrix4f resultMat;
+        resultMat << 0, 0, 0, 0,
+                     0, 0, 0, 0,
+                     0, 0, 0, 0,
+                     0, 0, 0, 1;
 
         for (std::vector<BoneWeight>::const_iterator weightIt = it->first.begin(); weightIt != it->first.end(); ++weightIt)
         {
             Bone* bone = weightIt->first.first;
             const osg::Matrix& invBindMatrix = weightIt->first.second;
+            Eigen::Matrix4f invBindMatrixEigen;
+            for (int i=0; i<4; ++i)
+                for (int j=0; j<4; ++j)
+                    invBindMatrixEigen(j,i) = invBindMatrix(i,j);
+
             float weight = weightIt->second;
-            const osg::Matrixf& boneMatrix = bone->mMatrixInSkeletonSpace;
-            accummulateMatrix(invBindMatrix, boneMatrix, weight, resultMat);
+            const Eigen::Matrix4f& boneMatrix = bone->mMatrixInSkeletonSpace;
+            accummulateMatrix(invBindMatrixEigen, boneMatrix, weight, resultMat);
         }
-        resultMat = resultMat * geomToSkel;
+        resultMat = geomToSkelEigen * resultMat;
 
         for (std::vector<unsigned short>::const_iterator vertexIt = it->second.begin(); vertexIt != it->second.end(); ++vertexIt)
         {
             unsigned short vertex = *vertexIt;
-            (*positionDst)[vertex] = resultMat.preMult((*positionSrc)[vertex]);
-            (*normalDst)[vertex] = osg::Matrix::transform3x3((*normalSrc)[vertex], resultMat);
+            Eigen::Vector4f positionVec;
+            positionVec << (*positionSrc)[vertex].x(),
+                        (*positionSrc)[vertex].y(),
+                        (*positionSrc)[vertex].z(),
+                            1.f;
+
+            Eigen::Vector3f normalVec;
+            normalVec << (*normalSrc)[vertex].x(),
+                        (*normalSrc)[vertex].y(),
+                        (*normalSrc)[vertex].z();
+
+            positionVec = resultMat * positionVec;
+            normalVec = resultMat.block<3,3>(0,0) * normalVec;
+
+            (*positionDst)[vertex].x() = positionVec(0);
+            (*positionDst)[vertex].y() = positionVec(1);
+            (*positionDst)[vertex].z() = positionVec(2);
+
+            (*normalDst)[vertex].x() = normalVec(0);
+            (*normalDst)[vertex].y() = normalVec(1);
+            (*normalDst)[vertex].z() = normalVec(2);
         }
     }
 
@@ -262,12 +323,17 @@ void RigGeometry::updateBounds(osg::NodeVisitor *nv)
     mSkeleton->updateBoneMatrices(nv);
 
     osg::Matrixf geomToSkel = getGeomToSkelMatrix(nv);
+    Eigen::Matrix4f geomToSkelEigen;
+    for (int i=0; i<4; ++i)
+        for (int j=0; j<4; ++j)
+            geomToSkelEigen(j,i) = geomToSkel(i,j);
+
     osg::BoundingBox box;
     for (BoneSphereMap::const_iterator it = mBoneSphereMap.begin(); it != mBoneSphereMap.end(); ++it)
     {
         Bone* bone = it->first;
         osg::BoundingSpheref bs = it->second;
-        transformBoundingSphere(bone->mMatrixInSkeletonSpace * geomToSkel, bs);
+        transformBoundingSphere(geomToSkelEigen * bone->mMatrixInSkeletonSpace, bs);
         box.expandBy(bs);
     }
 
