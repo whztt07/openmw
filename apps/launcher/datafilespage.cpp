@@ -91,6 +91,17 @@ void Launcher::DataFilesPage::populateFileViews(const QString& contentModelName)
 {
     QStringList paths = mGameSettings.getDataDirs();
 
+    // if "data-local" is explicitely listed in "data", remove it to prevent the same path being added twice
+    // we do this here instead of in the settings reader, to keep the separation of data and data-local intact,
+    // which could be important when data-local changes as result of an environment variable change.
+    for (QStringList::iterator it = paths.begin(); it != paths.end();)
+    {
+        if (QDir(*it) == QDir(mDataLocal))
+            it = paths.erase(it);
+        else
+            ++it;
+    }
+
     foreach(const QString &path, paths)
         mSelector->addFiles(path);
 
