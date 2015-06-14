@@ -15,6 +15,8 @@
 namespace SceneUtil
 {
 
+bool RigGeometry::useThread = true;
+
 class UpdateRigBounds : public osg::Drawable::UpdateCallback
 {
 public:
@@ -293,7 +295,7 @@ void RigGeometry::update(osg::NodeVisitor* nv)
     for (BoneSphereMap::const_iterator it = mBoneSphereMap.begin(); it != mBoneSphereMap.end(); ++it)
         boneMatrices[it->first] = it->first->mMatrixInSkeletonSpace;
 
-    if (mWorkQueue)
+    if (mWorkQueue && useThread)
     {
         // shouldn't happen, unless the CullCallback was a false positive, i.e. the Drawable's parent wasn't culled, but the Drawable *is* culled
         if (mWorkTicket)

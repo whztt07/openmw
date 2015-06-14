@@ -58,6 +58,8 @@ namespace SceneUtil
         virtual void accept(osg::PrimitiveFunctor& pf) const;
         virtual void accept(osg::PrimitiveIndexFunctor& pf) const;
 
+        static bool useThread;
+
     private:
         mutable osg::ref_ptr<WorkTicket> mWorkTicket;
         WorkQueue* mWorkQueue;

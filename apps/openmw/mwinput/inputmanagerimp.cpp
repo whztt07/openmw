@@ -3,6 +3,8 @@
 #include <cmath>
 #include <iostream>
 
+#include <components/sceneutil/riggeometry.hpp>
+
 #include <boost/lexical_cast.hpp>
 
 #include <MyGUI_InputManager.h>
@@ -640,6 +642,11 @@ namespace MWInput
 
     void InputManager::keyPressed( const SDL_KeyboardEvent &arg )
     {
+        if (arg.keysym.sym == SDLK_0)
+        {
+            SceneUtil::RigGeometry::useThread = !SceneUtil::RigGeometry::useThread;
+            std::cout << "On ? " << SceneUtil::RigGeometry::useThread << std::endl;
+        }
         // HACK: to make Morrowind's default keybinding for the console work without printing an extra "^" upon closing
         // This assumes that SDL_TextInput events always come *after* the key event
         // (which is somewhat reasonable, and hopefully true for all SDL platforms)
