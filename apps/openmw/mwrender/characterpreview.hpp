@@ -24,7 +24,7 @@ namespace MWRender
 {
 
     class NpcAnimation;
-    class DrawOnceCallback;
+    class DrawCallback;
 
     class CharacterPreview
     {
@@ -54,7 +54,7 @@ namespace MWRender
         Resource::ResourceSystem* mResourceSystem;
         osg::ref_ptr<osg::Texture2D> mTexture;
         osg::ref_ptr<osg::Camera> mCamera;
-        osg::ref_ptr<DrawOnceCallback> mDrawOnceCallback;
+        osg::ref_ptr<DrawCallback> mDrawOnceCallback;
 
         osg::Vec3f mPosition;
         osg::Vec3f mLookAt;

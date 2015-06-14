@@ -404,7 +404,7 @@ namespace MWRender
     void RenderingManager::screenshot(osg::Image *image, int w, int h)
     {
         int oldCullMask = mViewer->getCamera()->getCullMask();
-        mViewer->getCamera()->setCullMask(oldCullMask & (~Mask_GUI));
+        //mViewer->getCamera()->setCullMask(oldCullMask & (~Mask_GUI));
 
         osg::ref_ptr<osg::Camera> rttCamera (new osg::Camera);
         rttCamera->setNodeMask(Mask_RenderToTexture);
@@ -523,6 +523,7 @@ namespace MWRender
         intersector->setIntersectionLimit(osgUtil::LineSegmentIntersector::LIMIT_NEAREST);
 
         osgUtil::IntersectionVisitor intersectionVisitor(intersector);
+        intersectionVisitor.setFrameStamp(mViewer->getFrameStamp()); // set a FrameStamp to select the correct FrameSwitch for RigGeometry double-buffering
         int mask = intersectionVisitor.getTraversalMask();
         mask &= ~(Mask_RenderToTexture|Mask_Sky|Mask_Debug|Mask_Effect|Mask_Water);
         if (ignorePlayer)
@@ -552,6 +553,7 @@ namespace MWRender
         intersector->setIntersectionLimit(osgUtil::LineSegmentIntersector::LIMIT_NEAREST);
 
         osgUtil::IntersectionVisitor intersectionVisitor(intersector);
+        intersectionVisitor.setFrameStamp(mViewer->getFrameStamp()); // set a FrameStamp to select the correct FrameSwitch for RigGeometry double-buffering
         int mask = intersectionVisitor.getTraversalMask();
         mask &= ~(Mask_RenderToTexture|Mask_Sky|Mask_Debug|Mask_Effect|Mask_Water);
         if (ignorePlayer)

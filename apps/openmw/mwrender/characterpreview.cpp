@@ -21,35 +21,31 @@
 namespace MWRender
 {
 
-    class DrawOnceCallback : public osg::NodeCallback
+    class DrawCallback : public osg::NodeCallback
     {
     public:
-        DrawOnceCallback ()
-            : mRendered(false)
+        DrawCallback ()
+            : mFramesToRender(2)
         {
         }
 
         virtual void operator () (osg::Node* node, osg::NodeVisitor* nv)
         {
-            if (!mRendered)
-            {
-                mRendered = true;
-            }
-            else
-            {
+            if (mFramesToRender == 0)
                 node->setNodeMask(0);
-            }
+            else
+                --mFramesToRender;
 
             traverse(node, nv);
         }
 
         void redrawNextFrame()
         {
-            mRendered = false;
+            mFramesToRender = 2;
         }
 
     private:
-        bool mRendered;
+        int mFramesToRender;
     };
 
     CharacterPreview::CharacterPreview(osgViewer::Viewer* viewer, Resource::ResourceSystem* resourceSystem,
@@ -119,7 +115,7 @@ namespace MWRender
         mNode = new osg::PositionAttitudeTransform;
         lightManager->addChild(mNode);
 
-        mDrawOnceCallback = new DrawOnceCallback;
+        mDrawOnceCallback = new DrawCallback;
         mCamera->addUpdateCallback(mDrawOnceCallback);
 
         mViewer->getSceneData()->asGroup()->addChild(mCamera);
@@ -231,7 +227,7 @@ namespace MWRender
                     groupname = "inventoryhandtohand";
 
                 showCarriedLeft = (iter->getClass().canBeEquipped(*iter, mCharacter).first != 2);
-           }
+            }
             else
                 groupname = "inventoryhandtohand";
         }
@@ -261,6 +257,7 @@ namespace MWRender
         osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector (new osgUtil::LineSegmentIntersector(osgUtil::Intersector::WINDOW, posX, posY));
         intersector->setIntersectionLimit(osgUtil::LineSegmentIntersector::LIMIT_ONE);
         osgUtil::IntersectionVisitor visitor(intersector);
+        visitor.setFrameStamp(mViewer->getFrameStamp());
 
         osg::Node::NodeMask nodeMask = mCamera->getNodeMask();
         mCamera->setNodeMask(~0);

@@ -17,8 +17,10 @@ void WorkTicket::waitTillDone()
 
 void WorkTicket::signalDone()
 {
-    OpenThreads::ScopedLock<OpenThreads::Mutex> lock(mMutex);
-    mDone.exchange(1);
+    {
+        OpenThreads::ScopedLock<OpenThreads::Mutex> lock(mMutex);
+        mDone.exchange(1);
+    }
     mCondition.broadcast();
 }
 
@@ -107,11 +109,8 @@ WorkThread::WorkThread(WorkQueue *workQueue)
 
 void WorkThread::run()
 {
-    while (true)
+    while (WorkItem* item = mWorkQueue->removeWorkItem())
     {
-        WorkItem* item = mWorkQueue->removeWorkItem();
-        if (!item)
-            return;
         item->doWork();
         delete item;
     }

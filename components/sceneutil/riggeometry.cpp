@@ -367,8 +367,9 @@ void RigGeometry::accept(osg::PrimitiveFunctor &pf) const
 {
     if (mWorkTicket)
     {
-        mWorkTicket->waitTillDone();
-        mWorkTicket = NULL;
+        std::cerr << "RigGeometry can not accept raycast with the frame still in preparation, "
+                     "this should never happen if access is double buffered with a FrameSwitch" << std::endl;
+        return;
     }
     osg::Geometry::accept(pf);
 }
@@ -377,8 +378,9 @@ void RigGeometry::accept(osg::PrimitiveIndexFunctor &pf) const
 {
     if (mWorkTicket)
     {
-        mWorkTicket->waitTillDone();
-        mWorkTicket = NULL;
+        std::cerr << "RigGeometry can not accept raycast with the frame still in preparation, "
+                     "this should never happen if access is double buffered with a FrameSwitch" << std::endl;
+        return;
     }
     osg::Geometry::accept(pf);
 }

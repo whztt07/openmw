@@ -171,10 +171,15 @@ namespace
         virtual void traverse(osg::NodeVisitor& nv)
         {
             const osg::FrameStamp* stamp = nv.getFrameStamp();
-            if (!stamp || nv.getTraversalMode() != osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN)
+            if (nv.getTraversalMode() != osg::NodeVisitor::TRAVERSE_ACTIVE_CHILDREN)
                 osg::Group::traverse(nv);
             else
             {
+                if (!stamp)
+                {
+                    std::cerr << "FrameSwitch warning: trying to traverse active children, but no framestamp given!" << std::endl;
+                    return;
+                }
                 for (unsigned int i=0; i<getNumChildren(); ++i)
                 {
                     if (i%2 == stamp->getFrameNumber()%2)
