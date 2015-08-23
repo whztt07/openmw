@@ -564,6 +564,8 @@ if (BUILD_OPENMW)
     add_subdirectory( apps/openmw )
 endif()
 
+add_subdirectory( apps/esmconcat )
+
 if (BUILD_BSATOOL)
   add_subdirectory( apps/bsatool )
 endif()
