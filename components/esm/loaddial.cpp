@@ -44,6 +44,9 @@ namespace ESM
                     }
                     break;
                 }
+                case ESM::SREC_NAME:
+                    esm.skipHSub(); // NAME was written twice in earlier commit, ignore
+                    break;
                 case ESM::SREC_DELE:
                     esm.skipHSub();
                     mType = Unknown;
