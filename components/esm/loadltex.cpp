@@ -40,8 +40,8 @@ namespace ESM
             }
         }
 
-        if (!hasName)
-            esm.fail("Missing NAME subrecord");
+        //if (!hasName)
+        //    esm.fail("Missing NAME subrecord");
         if (!hasIndex)
             esm.fail("Missing INTV subrecord");
     }
