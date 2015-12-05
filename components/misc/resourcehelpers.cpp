@@ -63,15 +63,12 @@ std::string Misc::ResourceHelpers::correctResourcePath(const std::string &topLev
 
     std::string origExt = correctedPath;
 
-    // since we know all (GOTY edition or less) textures end
-    // in .dds, we change the extension
-    bool changedToDds = changeExtensionToDds(correctedPath);
-    if (vfs->exists(correctedPath))
-        return correctedPath;
-    // if it turns out that the above wasn't true in all cases (not for vanilla, but maybe mods)
-    // verify, and revert if false (this call succeeds quickly, but fails slowly)
-    if (changedToDds && vfs->exists(origExt))
+    if (vfs->exists(origExt))
         return origExt;
+
+    bool changedToDds = changeExtensionToDds(correctedPath);
+    if (changedToDds && vfs->exists(correctedPath))
+        return correctedPath;
 
     // fall back to a resource in the top level directory if it exists
     std::string fallback = topLevelDirectory + "\\" + getBasename(correctedPath);
